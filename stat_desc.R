@@ -92,7 +92,6 @@ library(GGally)
 ggcorr(actphys_sedent[actphys_sedent$POPULATION2 == "Adulte", var_duree], size = 3, hjust = 0.75)
 ggcorr(actphys_sedent[actphys_sedent$POPULATION2 == "Adulte", var_score], size = 3, hjust = 0.75)
 
-
 ggpairs(actphys_sedent[, c("POPULATION2", var_duree)], aes(colour = POPULATION2))
 
 
@@ -113,7 +112,7 @@ library(ggpubr)
 library(factoextra)
 
 coord <- res.pca$ind$coord
-res.kmeans <- kmeans(coord, centers = 4)
+res.kmeans <- kmeans(coord, centers = 3)
 
 fviz_cluster(res.kmeans, data = coord, 
              geom = "point",
