@@ -1,0 +1,133 @@
+---
+title: "Sujet 3 Funathon"
+author: "Lucie CHIGOT"
+date: "2023-06-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Chargement des packages
+
+```{r packages, message=FALSE, warning=FALSE, include=FALSE}
+
+library(aws.s3)
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(patchwork)
+
+```
+
+## Import des données
+
+
+```{r données, message=FALSE, warning=FALSE, include=FALSE}
+
+bucket <- "projet-funathon"
+path_data <- "2023/sujet3/diffusion"
+
+description_indiv <- s3read_using(read_delim, object = paste(path_data, "description-indiv.csv", sep="/"), bucket = bucket, opts = list('region'=''), show_col_types = FALSE)
+habitudes_indiv <- s3read_using(read_delim, object = paste(path_data, "habitudes-indiv.csv", sep="/"), bucket = bucket, opts = list('region'=''), show_col_types = FALSE)
+actphys_sedent <- s3read_using(read_delim, object = paste(path_data, "actphys-sedent.csv", sep="/"), bucket = bucket, opts = list('region'=''), show_col_types = FALSE)
+fpq <- s3read_using(read_delim, object = paste(path_data, "fpq.csv", sep="/"), bucket = bucket, opts = list('region'=''), show_col_types = FALSE)
+
+```
+
+
+## Structure des données
+
+On se concentre sur les tables `description_indiv` et  `actphys_sedent`.
+
+``` {r structure}
+
+head(description_indiv)
+head(actphys_sedent)
+
+```
+
+On décide, pour se simplifier la vie, de ne pas prendre en compte les pondérations. Attention, tous les résultats devront donc être interprêtés à l'échelle de l'échantillon enquêtés et non à l'échelle de toute la population.
+
+Dans la table sur les activités physiques, deux populations sont enquêtées : les adultes et les enfants.
+
+``` {r recodage}
+
+#Recodage de la variable POPULATION en une variable POPULATION2, plus explicite
+actphys_sedent$POPULATION2 <- case_when(
+  actphys_sedent$POPULATION == "Pop1 Individu" ~ "Enfant",
+  actphys_sedent$POPULATION == "Pop2 Individu" ~ "Adulte"
+)
+
+#Recodage de la variable sédentarité
+actphys_sedent$sedentarite_qual <- case_when(
+  actphys_sedent$sedentarite == "0" ~ "Faible",
+  actphys_sedent$sedentarite == "1" ~ "Modéré",
+  actphys_sedent$sedentarite == "2" ~ "Elevé",
+  is.na(actphys_sedent$sedentarite) ~ "Inconnu"
+) 
+
+#Recodage de la variable profil_activite
+actphys_sedent$profil_activite_qual <- case_when(
+  actphys_sedent$profil_activite == "1" ~ "Comportement inactif et sédentaire",
+  actphys_sedent$profil_activite == "2" ~ "Comportement inactif et non sédentaire",
+  actphys_sedent$profil_activite == "3" ~ "Comportement actif et sédentaire",
+  actphys_sedent$profil_activite == "4" ~ "Comportement actif et non sédentaire",
+  is.na(actphys_sedent$profil_activite) ~ "Inconnu"
+) 
+
+```
+
+La première idée peut être de comparer la distribution de différentes variables dans chacune de ces populations.
+
+``` {r boxplots}
+
+#Fonction pour tracer des boxplots
+boxplot <- function(variable){
+  ggplot(actphys_sedent, aes(POPULATION2, eval(parse(text = variable)))) +
+    geom_boxplot() +
+    ylab(variable) +
+    theme_classic()
+}
+
+```
+
+Voyons comment se distribuent les temps passés devant la télévision, les jeux vidéos et l'ordinateurs chez les enfants et les adultes.
+
+```{r graphes_boxplot, echo=TRUE, message=FALSE, warning=FALSE}
+
+b1 <- boxplot("tv_duree")
+b2 <- boxplot("jvideo_duree")
+b3 <- boxplot("ordi_duree")
+
+b1 + b2 + b3
+
+```
+
+Regardons aussi les fréquences pour des variables qualitatives.
+
+``` {r barplot}
+
+#Fonction pour tracer des barplots
+barplot <- function(variable){
+  ggplot(actphys_sedent) +
+    aes(x = factor(eval(parse(text = variable))), fill = factor(POPULATION2)) +
+    geom_bar(position = "fill") +
+    xlab(variable) +
+    ylab("Proportion") +
+    labs(fill = "Population") +
+    scale_y_continuous(labels = scales::percent) +
+    theme_classic() +
+    scale_fill_brewer()
+} 
+
+```
+
+
+``` {r graphes_barplot}
+
+p1 <- barplot("sedentarite_qual")
+p2 <- barplot("profil_activite_qual")
+
+p1 + p2

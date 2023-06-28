@@ -9,6 +9,7 @@ for (package in requirements) {
 library(aws.s3)
 library(dplyr)
 library(readr)
+library(tmap)
 
 # Import des données
 bucket <- "projet-funathon"
